@@ -30,13 +30,13 @@ class SimpleFormatter(logging.Formatter):
         self,
         fmt: str = DEFAULT_FMT,
         timespec: TimeSpecType = "milliseconds",
-        log_timezone: ZoneInfo = ZoneInfo("UTC"),
+        log_timezone: ZoneInfo | None = None,
     ):
         super().__init__()
         self.fmt = fmt
         self._fmt_keys = self._parse_fmt_keys()
         self.timespec = timespec
-        self.log_timezone = log_timezone
+        self.log_timezone = log_timezone if log_timezone is not None else ZoneInfo("UTC")
 
     def _parse_fmt_keys(self) -> List[str]:
         keys = [key[2:-2] for key in self.fmt.split(" ")]
