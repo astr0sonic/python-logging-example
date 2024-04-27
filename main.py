@@ -1,12 +1,12 @@
 import logging
 import sys
 
+from formatters import SimpleFormatter
+
 logger = logging.getLogger("my_app")
 
 console_handler = logging.StreamHandler(stream=sys.stdout)
-formatter = logging.Formatter(
-    fmt="%(asctime)s %(message)s", datefmt="%Y.%m.%dT%H:%M:%S%z"
-)
+formatter = SimpleFormatter(fmt="%(asctime)s %(message)s")
 console_handler.setFormatter(formatter)
 
 logger.addHandler(console_handler)
@@ -18,7 +18,7 @@ foo = 1
 bar = 0
 try:
     baz = foo / bar
-except ZeroDivisionError as e:
+except ZeroDivisionError:
     logger.exception("zero division", extra={"foo": foo, "bar": bar})
     baz = 0
 
