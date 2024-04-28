@@ -1,11 +1,14 @@
 import datetime
 import json
 import logging
+import sys
 from collections import OrderedDict
 from typing import Dict, List, Literal
 from typing import OrderedDict as OrderedDictType
 from typing import Tuple, TypeAlias
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+logger = logging.getLogger("root")
 
 DEFAULT_LOG_RECORD_ATTRS = logging.LogRecord(
     name="", level=0, pathname="", lineno=0, msg="", args=None, exc_info=None
@@ -35,15 +38,20 @@ class SimpleFormatter(logging.Formatter):
         self,
         fmt: str = DEFAULT_FMT,
         timespec: TimeSpecType = "milliseconds",
-        log_timezone: ZoneInfo | None = None,
+        log_timezone: str | None = None,
     ):
         super().__init__()
         self.fmt = fmt
         self._fmt_keys = self._parse_fmt_keys()
         self.timespec = timespec
-        self.log_timezone = (
-            log_timezone if log_timezone is not None else ZoneInfo("UTC")
-        )
+        try:
+            timezone = (
+                ZoneInfo(log_timezone) if log_timezone is not None else ZoneInfo("UTC")
+            )
+        except ZoneInfoNotFoundError:
+            logger.exception("Wrong timezone: %s", log_timezone)
+            sys.exit(1)
+        self.log_timezone = timezone
 
     def _parse_fmt_keys(self) -> List[str]:
         keys = [
@@ -128,15 +136,20 @@ class JSONFormatter(logging.Formatter):
         self,
         fmt_keys: Dict[str, str] | None = None,
         timespec: TimeSpecType = "milliseconds",
-        log_timezone: ZoneInfo | None = None,
+        log_timezone: str | None = None,
     ):
         super().__init__()
         self.fmt_keys = fmt_keys if fmt_keys is not None else self.DEFAULT_FMT_KEYS
         self._check_fmt_keys()
         self.timespec = timespec
-        self.log_timezone = (
-            log_timezone if log_timezone is not None else ZoneInfo("UTC")
-        )
+        try:
+            timezone = (
+                ZoneInfo(log_timezone) if log_timezone is not None else ZoneInfo("UTC")
+            )
+        except ZoneInfoNotFoundError:
+            logger.exception("Wrong timezone: %s", log_timezone)
+            sys.exit(1)
+        self.log_timezone = timezone
 
     def _check_fmt_keys(self) -> None:
         for key, _ in self.fmt_keys.items():

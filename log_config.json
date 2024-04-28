@@ -4,7 +4,9 @@
     "formatters": {
         "simple": {
             "()": "formatters.SimpleFormatter",
-            "fmt": "%(asctime)s %(name)s %(levelname)s %(message)s"
+            "fmt": "%(asctime)s %(name)s %(levelname)s %(message)s",
+            "timespec": "microseconds",
+            "log_timezone": "Europe/Moscow"
         },
         "json": {
             "()": "formatters.JSONFormatter",
@@ -13,7 +15,9 @@
                 "name": "name",
                 "levelname": "lvl",
                 "message": "msg"
-            }
+            },
+            "timespec": "milliseconds",
+            "log_timezone": "UTC"
         }
     },
     "handlers": {
