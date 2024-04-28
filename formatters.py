@@ -3,9 +3,7 @@ import json
 import logging
 import sys
 from collections import OrderedDict
-from typing import Dict, List, Literal
-from typing import OrderedDict as OrderedDictType
-from typing import Tuple, TypeAlias
+from typing import Any, Dict, List, Literal, MutableMapping, Tuple, TypeAlias
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 logger = logging.getLogger("root")
@@ -28,7 +26,7 @@ TimeSpecType: TypeAlias = (
     | Literal["milliseconds"]
     | Literal["microseconds"]
 )
-LogDataType: TypeAlias = OrderedDictType[str, str | OrderedDictType[str, str]]
+LogDataType: TypeAlias = MutableMapping[str, Any]
 
 
 class SimpleFormatter(logging.Formatter):

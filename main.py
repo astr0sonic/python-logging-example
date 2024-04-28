@@ -1,6 +1,7 @@
 import logging
 from pathlib import Path
 
+from adapters import CustomLoggerAdapter
 from log_configuration import configure_logging
 
 logger = logging.getLogger("my_app")
@@ -20,3 +21,6 @@ except ZeroDivisionError:
     baz = 0
 
 print(baz)
+
+adapter = CustomLoggerAdapter(logger, extra={"foo": "bar", "bar": "baz"})
+adapter.debug("logger adapter testing", extra={"key1": "value2"})
