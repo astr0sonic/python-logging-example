@@ -46,7 +46,11 @@ class SimpleFormatter(logging.Formatter):
         )
 
     def _parse_fmt_keys(self) -> List[str]:
-        keys = [key[2:-2] for key in self.fmt.split(" ")]
+        keys = [
+            key[2:-2]
+            for key in self.fmt.split(" ")
+            if key[2:-2] not in ["msg", "exc_info", "stack_info"]
+        ]
         for key in keys:
             if key not in DEFAULT_LOG_RECORD_ATTRS:
                 raise ValueError(f"Unknown format key: {key}")
@@ -63,7 +67,7 @@ class SimpleFormatter(logging.Formatter):
         for key in self._fmt_keys:
             if key == "asctime":
                 value = self._format_time(record)
-            elif key in ["message", "msg"]:
+            elif key == "message":
                 value = record.getMessage()
             else:
                 value = str(getattr(record, key))
@@ -82,22 +86,25 @@ class SimpleFormatter(logging.Formatter):
         was_exception = False
         exc_info = record.exc_info
         if exc_info:
-            was_exception = True
+            if not was_exception:
+                was_exception = True
             formatted += f"\n{self.formatException(exc_info)}"
         stack_info = record.stack_info
         if stack_info:
-            was_exception = True
+            if not was_exception:
+                was_exception = True
             formatted += f"\n{self.formatStack(stack_info)}"
         return formatted, was_exception
 
     def _set_extra_keys(
         self, record: logging.LogRecord, formatted: str, was_exception: bool
     ) -> str:
-        is_first = True
         was_extra = False
+        is_first = True
         for key, value in record.__dict__.items():
             if key not in DEFAULT_LOG_RECORD_ATTRS:
-                was_extra = True
+                if not was_extra:
+                    was_extra = True
                 if is_first:
                     if was_exception:
                         delimeter = "\n"
@@ -146,11 +153,13 @@ class JSONFormatter(logging.Formatter):
 
     def _set_main_keys(
         self, record: logging.LogRecord, log_data: LogDataType
-    ) -> OrderedDictType[str, str]:
+    ) -> LogDataType:
         for key, new_key in self.fmt_keys.items():
+            if key in ["msg", "exc_info", "stack_info"]:
+                continue
             if key == "asctime":
                 value = self._format_time(record)
-            elif key in ["message", "msg"]:
+            elif key == "message":
                 value = record.getMessage()
             else:
                 value = str(getattr(record, key))
@@ -180,9 +189,11 @@ class JSONFormatter(logging.Formatter):
     def _set_extra_keys(
         self, record: logging.LogRecord, log_data: LogDataType
     ) -> LogDataType:
-        extra_key = "extra"
-        log_data[extra_key] = OrderedDict()
+        extra = OrderedDict()
         for key, value in record.__dict__.items():
             if key not in DEFAULT_LOG_RECORD_ATTRS:
-                log_data[extra_key][key] = str(value)
+                extra[key] = str(value)
+
+        extra_key = "extra"
+        log_data[extra_key] = extra
         return log_data
