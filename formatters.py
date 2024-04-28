@@ -1,6 +1,10 @@
 import datetime
+import json
 import logging
-from typing import List, Literal, Tuple
+from collections import OrderedDict
+from typing import Dict, List, Literal
+from typing import OrderedDict as OrderedDictType
+from typing import Tuple, TypeAlias
 from zoneinfo import ZoneInfo
 
 DEFAULT_LOG_RECORD_ATTRS = logging.LogRecord(
@@ -13,7 +17,7 @@ DEFAULT_LOG_RECORD_ATTRS.update(
     }
 )
 
-TimeSpecType = (
+TimeSpecType: TypeAlias = (
     Literal["auto"]
     | Literal["hours"]
     | Literal["minutes"]
@@ -21,10 +25,11 @@ TimeSpecType = (
     | Literal["milliseconds"]
     | Literal["microseconds"]
 )
+LogDataType: TypeAlias = OrderedDictType[str, str | OrderedDictType[str, str]]
 
 
 class SimpleFormatter(logging.Formatter):
-    DEFAULT_FMT = "%(message)s"
+    DEFAULT_FMT = "%(asctime)s %(message)s"
 
     def __init__(
         self,
@@ -36,7 +41,9 @@ class SimpleFormatter(logging.Formatter):
         self.fmt = fmt
         self._fmt_keys = self._parse_fmt_keys()
         self.timespec = timespec
-        self.log_timezone = log_timezone if log_timezone is not None else ZoneInfo("UTC")
+        self.log_timezone = (
+            log_timezone if log_timezone is not None else ZoneInfo("UTC")
+        )
 
     def _parse_fmt_keys(self) -> List[str]:
         keys = [key[2:-2] for key in self.fmt.split(" ")]
@@ -87,8 +94,10 @@ class SimpleFormatter(logging.Formatter):
         self, record: logging.LogRecord, formatted: str, was_exception: bool
     ) -> str:
         is_first = True
+        was_extra = False
         for key, value in record.__dict__.items():
             if key not in DEFAULT_LOG_RECORD_ATTRS:
+                was_extra = True
                 if is_first:
                     if was_exception:
                         delimeter = "\n"
@@ -97,5 +106,83 @@ class SimpleFormatter(logging.Formatter):
                     formatted += delimeter
                     is_first = False
                 formatted += f"{key}={str(value)} "
-        formatted = formatted[:-1]
+        if was_extra:
+            formatted = formatted[:-1]
         return formatted
+
+
+class JSONFormatter(logging.Formatter):
+    DEFAULT_FMT_KEYS = {
+        "asctime": "timestamp",
+        "message": "message",
+    }
+
+    def __init__(
+        self,
+        fmt_keys: Dict[str, str] | None = None,
+        timespec: TimeSpecType = "milliseconds",
+        log_timezone: ZoneInfo | None = None,
+    ):
+        super().__init__()
+        self.fmt_keys = fmt_keys if fmt_keys is not None else self.DEFAULT_FMT_KEYS
+        self._check_fmt_keys()
+        self.timespec = timespec
+        self.log_timezone = (
+            log_timezone if log_timezone is not None else ZoneInfo("UTC")
+        )
+
+    def _check_fmt_keys(self) -> None:
+        for key, _ in self.fmt_keys.items():
+            if key not in DEFAULT_LOG_RECORD_ATTRS:
+                raise ValueError(f"Unknown format key: {key}")
+
+    def format(self, record: logging.LogRecord) -> str:
+        log_data: LogDataType = OrderedDict()
+        log_data = self._set_main_keys(record, log_data)
+        log_data = self._set_exception_keys(record, log_data)
+        log_data = self._set_extra_keys(record, log_data)
+        log_entry = json.dumps(log_data)
+        return log_entry
+
+    def _set_main_keys(
+        self, record: logging.LogRecord, log_data: LogDataType
+    ) -> OrderedDictType[str, str]:
+        for key, new_key in self.fmt_keys.items():
+            if key == "asctime":
+                value = self._format_time(record)
+            elif key in ["message", "msg"]:
+                value = record.getMessage()
+            else:
+                value = str(getattr(record, key))
+            log_data[new_key] = value
+        return log_data
+
+    def _format_time(self, record: logging.LogRecord) -> str:
+        d = datetime.datetime.fromtimestamp(record.created, tz=self.log_timezone)
+        formatted_time = d.isoformat(timespec=self.timespec)
+        return formatted_time
+
+    def _set_exception_keys(
+        self, record: logging.LogRecord, log_data: LogDataType
+    ) -> LogDataType:
+        exc_info = record.exc_info
+        if exc_info:
+            new_key = self.fmt_keys.get("exc_info", None)
+            new_key = new_key if new_key is not None else "exceptionInfo"
+            log_data[new_key] = self.formatException(exc_info)
+        stack_info = record.stack_info
+        if stack_info:
+            new_key = self.fmt_keys.get("stack_info", None)
+            new_key = new_key if new_key is not None else "stackInfo"
+            log_data[new_key] = self.formatStack(stack_info)
+        return log_data
+
+    def _set_extra_keys(
+        self, record: logging.LogRecord, log_data: LogDataType
+    ) -> LogDataType:
+        extra_key = "extra"
+        log_data[extra_key] = OrderedDict()
+        for key, value in record.__dict__.items():
+            if key not in DEFAULT_LOG_RECORD_ATTRS:
+                log_data[extra_key][key] = str(value)
+        return log_data
