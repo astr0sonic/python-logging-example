@@ -177,7 +177,7 @@ class JSONFormatter(logging.Formatter):
         exc_info = record.exc_info
         if exc_info:
             new_key = self.fmt_keys.get("exc_info", None)
-            new_key = new_key if new_key is not None else "exceptionInfo"
+            new_key = new_key if new_key is not None else "excInfo"
             log_data[new_key] = self.formatException(exc_info)
         stack_info = record.stack_info
         if stack_info:
