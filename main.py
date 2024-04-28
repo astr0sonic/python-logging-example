@@ -1,10 +1,12 @@
 import logging
+from pathlib import Path
 
 from log_configuration import configure_logging
 
 logger = logging.getLogger("my_app")
 
-configure_logging(level=logging.DEBUG)
+base_dir = Path().absolute()
+configure_logging(base_dir=base_dir, level=logging.DEBUG)
 
 logger.info("info message without extra")
 logger.info("info message", extra={"foo": "foo"})

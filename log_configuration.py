@@ -8,11 +8,11 @@ from queue import Queue
 from typing import Dict
 
 
-def configure_logging(level: int) -> None:
-    log_dir = Path("logs")
+def configure_logging(base_dir: Path, level: int) -> None:
+    log_dir = Path(base_dir, "logs")
     create_log_dir(log_dir)
 
-    log_config_path = Path("log_config.json")
+    log_config_path = Path(base_dir, "log_config.json")
     log_config = get_log_config(log_config_path)
     logging.config.dictConfig(log_config)
 
