@@ -4,7 +4,7 @@ from log_configuration import configure_logging
 
 logger = logging.getLogger("my_app")
 
-configure_logging()
+configure_logging(level=logging.DEBUG)
 
 logger.info("info message without extra")
 logger.info("info message", extra={"foo": "foo"})
